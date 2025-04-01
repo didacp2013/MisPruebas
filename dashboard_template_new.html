@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuadro de Mando Excel</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .dashboard-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .form-select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+        .legend-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+            border: 1px solid #ddd;
+        }
+        .legend-color.positive {
+            background-color: #4CAF50;
+        }
+        .legend-color.negative {
+            background-color: #F44336;
+        }
+        .legend-info {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .dashboard-grid {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: auto;
+        }
+        .grid-header, .grid-row {
+            display: flex;
+        }
+        .grid-cell {
+            padding: 10px;
+            border-right: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+            min-width: 120px;
+            flex: 1;
+        }
+        .header-cell {
+            background-color: #f2f2f2;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+        }
+        .data-cell {
+            cursor: pointer;
+            transition: background-color 0.2s;
+            height: 120px;
+            overflow: hidden;
+            position: relative;
+        }
+        .data-cell:hover {
+            background-color: #f9f9f9;
+        }
+        .cell-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .cell-kpis {
+            font-size: 0.85em;
+            color: #666;
+        }
+        .kpi-item {
+            margin-bottom: 3px;
+        }
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .empty-cell {
+            background-color: #f9f9f9;
+        }
+        .no-data {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+        }
+        /* Modal para gráficos */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-modal:hover {
+            color: black;
+        }
+        .chart-container {
+            width: 100%;
+            height: 400px;
+        }
+        .mini-chart {
+            width: 100%;
+            height: 40px;
+            margin-top: 5px;
+        }
+        .positive .cell-value {
+            color: #4CAF50;
+        }
+        .negative .cell-value {
+            color: #F44336;
+        }
+        .view-toggle {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .view-toggle button {
+            padding: 5px 10px;
+            background-color: #f2f2f2;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .view-toggle button.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .view-toggle button:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        .view-toggle button:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>Cuadro de Mando Excel</h1>
+            <div class="date">Generado el: <span id="generatedDate">{{GENERATED_DATE}}</span></div>
+        </div>
+        
+        <div class="filters-container">
+            <div class="filter-group">
+                <label>Proyecto:</label>
+                <select id="projectFilter" class="form-select">
+                    <option value="all">Todos los proyectos</option>
+                    {{PROJECT_OPTIONS}}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label>Compañía:</label>
+                <select id="companyFilter" class="form-select">
+                    <option value="all">Todas las compañías</option>
+                    {{COMPANY_OPTIONS}}
+                </select>
+            </div>
+            
+            <div class="view-toggle">
+                <button id="kpiView" class="active">Ver KPIs</button>
+                <button id="historyView">Ver Histórico</button>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="applyFilters" class="action-button">Aplicar Filtros</button>
+                <button id="resetFilters" class="action-button">Restablecer</button>
+            </div>
+        </div>
+        
+        <div class="legend-container">
+            <div class="legend-item">
+                <span class="legend-color positive"></span> Valores positivos: Costes/Gastos
+            </div>
+            <div class="legend-item">
+                <span class="legend-color negative"></span> Valores negativos: Ingresos/Ahorros
+            </div>
+            <div class="legend-info">
+                Doble clic para ver gráfico histórico completo
+            </div>
+        </div>
+        
+        <div class="dashboard-content">
+            {{CELLS}}
+        </div>
+    </div>
+    
+    <!-- Modal para gráficos -->
+    <div id="chartModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="chartTitle">Datos Históricos</h2>
+            <div class="chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notificación -->
+    <div id="notification" class="notification">
+        <span id="notificationText"></span>
+    </div>
+
+    <script>
+        // Datos para gráficos
+        const cellData = JSON.parse('{{CELL_DATA_JSON}}');
+        let currentView = 'kpi'; // 'kpi' o 'history'
+        let activeFilters = {
+            project: 'all',
+            company: 'all'
+        };
+        
+        // Elementos DOM
+        const kpiViewBtn = document.getElementById('kpiView');
+        const historyViewBtn = document.getElementById('historyView');
+        const projectFilter = document.getElementById('projectFilter');
+        const companyFilter = document.getElementById('companyFilter');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+        const resetFiltersBtn = document.getElementById('resetFilters');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        
+        // Funciones de utilidad
+        function showNotification(message, isError = false) {
+            notificationText.textContent = message;
+            notification.className = isError ? 'notification error' : 'notification';
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Funcionalidad de cambio de vista
+        if (kpiViewBtn) {
+            kpiViewBtn.addEventListener('click', function() {
+                currentView = 'kpi';
+                this.classList.add('active');
+                if (historyViewBtn) historyViewBtn.classList.remove('active');
+                updateCellsView();
+                showNotification('Vista cambiada a KPIs');
+            });
+        }
+        
+        if (historyViewBtn) {
+            historyViewBtn.addEventListener('click', function() {
+                currentView = 'history';
+                this.classList.add('active');
+                if (kpiViewBtn) kpiViewBtn.classList.remove('active');
+                updateCellsView();
+                showNotification('Vista cambiada a Históricos');
+            });
+        }
+        
+        // Funcionalidad de filtros
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', function() {
+                activeFilters.project = projectFilter.value;
+                activeFilters.company = companyFilter.value;
+                filterDashboard();
+                showNotification('Filtros aplicados');
+            });
+        }
+        
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', function() {
+                projectFilter.value = 'all';
+                companyFilter.value = 'all';
+                activeFilters.project = 'all';
+                activeFilters.company = 'all';
+                filterDashboard();
+                showNotification('Filtros restablecidos');
+            });
+        }
+        
+        function updateCellsView() {
+            try {
+                document.querySelectorAll('.data-cell').forEach(cell => {
+                    const cellId = cell.getAttribute('data-cell-id');
+                    if (!cellId || !cellData || !cellData[cellId]) return;
+                    
+                    const data = cellData[cellId];
+                    
+                    // Limpiar contenido existente
+                    while (cell.firstChild) {
+                        cell.removeChild(cell.firstChild);
+                    }
+                    
+                    // Añadir valor principal
+                    if ('lastValue' in data) {
+                        const valueDiv = document.createElement('div');
+                        valueDiv.className = 'cell-value';
+                        valueDiv.textContent = formatNumber(data.lastValue);
+                        cell.appendChild(valueDiv);
+                    }
+                    
+                    if (currentView === 'kpi') {
+                        // Mostrar KPIs
+                        if (data.kpis) {
+                            const kpisDiv = document.createElement('div');
+                            kpisDiv.className = 'cell-kpis';
+                            
+                            // Valor de previsión
+                            if ('prevValue' in data.kpis) {
+                                const kpiItem = document.createElement('div');
+                                kpiItem.className = 'kpi-item';
+                                kpiItem.innerHTML = `<span class="kpi-label">Prev:</span> <span class="kpi-value">${formatNumber(data.kpis.prevValue)}</span>`;
+                                kpisDiv.appendChild(kpiItem);
+                            }
+                            
+                            // Porcentaje REAL/PREV
+                            if ('realPrevPercent' in data.kpis) {
+                                const kpiItem = document.createElement('div');
+                                kpiItem.className = 'kpi-item';
+                                kpiItem.innerHTML = `<span class="kpi-label">%R/P:</span> <span class="kpi-value">${formatPercent(data.kpis.realPrevPercent)}</span>`;
+                                kpisDiv.appendChild(kpiItem);
+                            }
+                            
+                            // Porcentaje PPTO/PREV
+                            if ('pptoPrevPercent' in data.kpis) {
+                                const kpiItem = document.createElement('div');
+                                kpiItem.className = 'kpi-item';
+                                kpiItem.innerHTML = `<span class="kpi-label">%P/P:</span> <span class="kpi-value">${formatPercent(data.kpis.pptoPrevPercent)}</span>`;
+                                kpisDiv.appendChild(kpiItem);
+                            }
+                            
+                            // Valor pendiente
+                            if ('pendingValue' in data.kpis) {
+                                const kpiItem = document.createElement('div');
+                                kpiItem.className = 'kpi-item';
+                                kpiItem.innerHTML = `<span class="kpi-label">Pdte:</span> <span class="kpi-value">${formatNumber(data.kpis.pendingValue)}</span>`;
+                                kpisDiv.appendChild(kpiItem);
+                            }
+                            
+                            cell.appendChild(kpisDiv);
+                        }
+                    } else {
+                        // Mostrar mini gráfico histórico
+                        if (data.timeSeries && data.timeSeries.length > 0) {
+                            const chartDiv = document.createElement('canvas');
+                            chartDiv.className = 'mini-chart';
+                            const safeId = 'mini-chart-' + cellId.replace(/[^a-zA-Z0-9]/g, '-');
+                            chartDiv.id = safeId;
+                            cell.appendChild(chartDiv);
+                            
+                            // Crear mini gráfico
+                            setTimeout(() => {
+                                createMiniChart(safeId, data.timeSeries);
+                            }, 10);
+                        } else {
+                            const noDataDiv = document.createElement('div');
+                            noDataDiv.className = 'no-data';
+                            noDataDiv.textContent = 'Sin datos históricos';
+                            cell.appendChild(noDataDiv);
+                        }
+                    }
+                });
+                
+                console.log(`Vista actualizada a: ${currentView}`);
+            } catch (error) {
+                console.error('Error al actualizar las celdas:', error);
+                showNotification('Error al actualizar la vista', true);
+            }
+        }
+        
+        function createMiniChart(chartId, timeSeries) {
+            try {
+                const ctx = document.getElementById(chartId);
+                if (!ctx) {
+                    console.error(`No se encontró el elemento con ID: ${chartId}`);
+                    return;
+                }
+                
+                // Verificar que timeSeries tiene datos válidos
+                if (!timeSeries || !Array.isArray(timeSeries) || timeSeries.length === 0) {
+                    console.error('Series temporales no válidas:', timeSeries);
+                    return;
+                }
+                
+                // Extraer datos para el gráfico
+                const labels = timeSeries.map(item => item.period || '');
+                const values = timeSeries.map(item => {
+                    const val = parseFloat(item.value);
+                    return isNaN(val) ? 0 : val;
+                });
+                
+                console.log(`Creando mini gráfico ${chartId} con ${labels.length} puntos de datos:`, labels, values);
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Valor',
+                            data: values,
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 1,
+                            pointRadius: 2,  // Aumentado para que los puntos sean visibles
+                            pointBackgroundColor: '#007bff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: true,  // Habilitado para mostrar valores al pasar el ratón
+                                callbacks: {
+                                    label: function(context) {
+                                        return formatNumber(context.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,  // Mostrar etiquetas del eje X
+                                ticks: {
+                                    font: {
+                                        size: 8
+                                    }
+                                }
+                            },
+                            y: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error(`Error al crear mini gráfico ${chartId}:`, error);
+            }
+        }
+        
+        function filterDashboard() {
+            try {
+                document.querySelectorAll('.grid-row').forEach(row => {
+                    const category = row.getAttribute('data-category');
+                    let showRow = false;
+                    
+                    // Verificar cada celda en la fila
+                    row.querySelectorAll('.data-cell').forEach(cell => {
+                        const cellId = cell.getAttribute('data-cell-id');
+                        let showCell = true;
+                        
+                        if (activeFilters.project !== 'all') {
+                            const cellProject = cell.getAttribute('data-project');
+                            if (cellProject && cellProject !== activeFilters.project) {
+                                showCell = false;
+                            }
+                        }
+                        
+                        if (activeFilters.company !== 'all') {
+                            const cellCompany = cell.getAttribute('data-company');
+                            if (cellCompany && cellCompany !== activeFilters.company) {
+                                showCell = false;
+                            }
+                        }
+                        
+                        // Mostrar u ocultar la celda
+                        if (showCell) {
+                            cell.style.display = '';
+                            showRow = true;
+                        } else {
+                            cell.style.display = 'none';
+                        }
+                    });
+                    
+                    // Mostrar u ocultar la fila completa
+                    if (showRow) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                console.log('Filtros aplicados:', activeFilters);
+            } catch (error) {
+                console.error('Error al aplicar filtros:', error);
+                showNotification('Error al aplicar filtros', true);
+            }
+        }
+        
+        // Funcionalidad para mostrar gráficos al hacer doble clic en una celda
+        document.querySelectorAll('.data-cell').forEach(cell => {
+            cell.addEventListener('dblclick', () => {
+                const cellId = cell.getAttribute('data-cell-id');
+                const data = cellData[cellId];
+                
+                if (data && data.timeSeries && data.timeSeries.length > 0) {
+                    showChart(cellId, data);
+                } else {
+                    showNotification('No hay datos históricos disponibles para esta celda', true);
+                }
+            });
+        });
+        
+        function showChart(cellId, data) {
+            try {
+                // Configurar el título del modal
+                const category = document.querySelector(`[data-cell-id="${cellId}"]`).getAttribute('data-category');
+                const subcategory = document.querySelector(`[data-cell-id="${cellId}"]`).getAttribute('data-subcategory');
+                document.getElementById('chartTitle').textContent = `Datos Históricos: ${category} - ${subcategory}`;
+                
+                // Preparar datos para el gráfico
+                const timeSeries = data.timeSeries || [];
+                const labels = timeSeries.map(item => item.period);
+                const values = timeSeries.map(item => {
+                    const val = parseFloat(item.value);
+                    return isNaN(val) ? 0 : val;
+                });
+                
+                // Crear el gráfico
+                const ctx = document.getElementById('historyChart').getContext('2d');
+                
+                // Destruir el gráfico anterior si existe
+                if (window.historyChart) {
+                    window.historyChart.destroy();
+                }
+                
+                window.historyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Valor',
+                            data: values,
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+                
+                // Mostrar el modal
+                document.getElementById('chartModal').style.display = "block";
+            } catch (error) {
+                console.error('Error al mostrar gráfico:', error);
+                showNotification('Error al mostrar el gráfico', true);
+            }
+        }
+        
+        // Modal para gráficos
+        const modal = document.getElementById('chartModal');
+        const closeModal = document.querySelector('.close-modal');
+        
+        if (closeModal) {
+            closeModal.onclick = function() {
+                modal.style.display = "none";
+            }
+        }
+        
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+        
+        // Funciones de formato
+        function formatNumber(value) {
+            try {
+                value = parseFloat(value);
+                return value.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            } catch (e) {
+                return "0,00";
+            }
+        }
+        
+        function formatPercent(value) {
+            try {
+                value = parseFloat(value);
+                return (value * 100).toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
+            } catch (e) {
+                return "0,0%";
+            }
+        }
+        
+        // Inicializar la vista
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Documento cargado, inicializando...');
+            console.log('Datos de celdas cargados:', Object.keys(cellData).length);
+            
+            // Depuración detallada de la estructura de datos
+            console.log('Estructura de cellData:', JSON.stringify(cellData).substring(0, 500) + '...');
+            
+            let cellsWithHistory = 0;
+            let cellsWithKpis = 0;
+            let exampleKpiCell = null;
+            
+            for (const key in cellData) {
+                const cell = cellData[key];
+                if (cell.timeSeries && cell.timeSeries.length > 0) {
+                    cellsWithHistory++;
+                }
+                if (cell.kpis) {
+                    cellsWithKpis++;
+                    if (!exampleKpiCell) {
+                        exampleKpiCell = {key: key, data: cell};
+                    }
+                }
+            }
+            
+            console.log("Celdas con datos históricos:", cellsWithHistory);
+            console.log("Celdas con KPIs:", cellsWithKpis);
+            
+            if (exampleKpiCell) {
+                console.log("Ejemplo de celda con KPIs:", exampleKpiCell.key);
+                console.log("Datos de KPI:", JSON.stringify(exampleKpiCell.data.kpis));
+            } else {
+                console.error("No se encontraron celdas con datos KPI");
+            }
+            
+            // Inicializar la vista
+            updateCellsView();
+            
+            // Mostrar notificación de bienvenida
+            showNotification('Cuadro de mando cargado correctamente');
+        });
+    </script>
+</body>
+</html>

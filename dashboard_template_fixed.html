@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuadro de Mando Excel</title>
+    <!-- Añadir antes del cierre del head -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .filters-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        .filter-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .dashboard-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .dashboard-grid {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .grid-row {
+            display: table-row;
+        }
+        .grid-cell {
+            display: table-cell;
+            padding: 10px;
+            border: 1px solid #ddd;
+            vertical-align: middle;
+        }
+        .header-cell {
+            font-weight: bold;
+            background-color: #e9e9e9;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .category-header {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .subcategory-header {
+            background-color: #0056b3;
+            color: white;
+        }
+        
+        .row-header {
+            background-color: #007bff;
+            color: white;
+            text-align: left;
+            padding-left: 15px;
+        }
+        
+        .data-cell {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .data-cell:hover {
+            background-color: #f0f0f0;
+        }
+        .data-cell {
+            background-color: white;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .data-cell:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .cell-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        .cell-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .cell-kpis {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .kpi-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+        }
+        .kpi-label {
+            color: #666;
+        }
+        .kpi-value {
+            font-weight: bold;
+        }
+        .legend-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+            border-radius: 3px;
+        }
+        .legend-color.positive {
+            background-color: #4CAF50;
+        }
+        .legend-color.negative {
+            background-color: #F44336;
+        }
+        .legend-info {
+            margin-left: auto;
+            font-style: italic;
+            color: #666;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 5px;
+            position: relative;
+        }
+        .close-modal {
+            position: absolute;
+            right: 15px;
+            top: 10px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .chart-container {
+            width: 100%;
+            height: 400px;
+        }
+        .mini-chart {
+            width: 100%;
+            height: 40px;
+            margin-top: 5px;
+        }
+        .positive .cell-value {
+            color: #4CAF50;
+        }
+        .negative .cell-value {
+            color: #F44336;
+        }
+        .view-toggle {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .view-toggle button {
+            padding: 5px 10px;
+            background-color: #f2f2f2;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+        .view-toggle button.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .view-toggle button:first-child {
+            border-radius: 4px 0 0 4px;
+        }
+        .view-toggle button:last-child {
+            border-radius: 0 4px 4px 0;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .action-button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .action-button:hover {
+            background-color: #0056b3;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+        }
+        .notification.error {
+            background-color: #F44336;
+        }
+        .kpi-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 0.85em;
+        }
+        .kpi-table th, .kpi-table td {
+            padding: 3px;
+            text-align: right;
+            border-bottom: 1px solid #eee;
+        }
+        .kpi-table th {
+            text-align: left;
+            font-weight: normal;
+            color: #666;
+        }
+        .no-data {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>Cuadro de Mando Excel</h1>
+            <div class="date">Generado el: <span id="generatedDate">{{GENERATED_DATE}}</span></div>
+        </div>
+        
+        <div class="filters-container">
+            <div class="filter-group">
+                <label>Proyecto:</label>
+                <select id="projectFilter" class="form-select">
+                    <option value="all">Todos los proyectos</option>
+                    {{PROJECT_OPTIONS}}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label>Compañía:</label>
+                <select id="companyFilter" class="form-select">
+                    <option value="all">Todas las compañías</option>
+                    {{COMPANY_OPTIONS}}
+                </select>
+            </div>
+            
+            <div class="view-toggle">
+                <button id="kpiView" class="active">Ver KPIs</button>
+                <button id="historyView">Ver Histórico</button>
+            </div>
+            
+            <div class="action-buttons">
+                <button id="applyFilters" class="action-button">Aplicar Filtros</button>
+                <button id="resetFilters" class="action-button">Restablecer</button>
+            </div>
+        </div>
+        
+        <div class="legend-container">
+            <div class="legend-item">
+                <span class="legend-color positive"></span> Valores positivos: Costes/Gastos
+            </div>
+            <div class="legend-item">
+                <span class="legend-color negative"></span> Valores negativos: Ingresos/Ahorros
+            </div>
+            <div class="legend-info">
+                Doble clic para ver gráfico histórico completo
+            </div>
+        </div>
+        
+        <div class="dashboard-content">
+            {{CELLS}}
+        </div>
+    </div>
+    
+    <!-- Modal para gráficos -->
+    <div id="chartModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="chartTitle">Datos Históricos</h2>
+            <div class="chart-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notificación -->
+    <div id="notification" class="notification">
+        <span id="notificationText"></span>
+    </div>
+
+    <style>
+        .dashboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .dashboard-table th, .dashboard-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .corner-header {
+            background-color: #f8f9fa;
+        }
+        
+        .category-header {
+            background-color: #007bff;
+            color: white;
+            text-align: left;
+            font-weight: bold;
+            min-width: 150px;
+        }
+        
+        .subcategory-header {
+            background-color: #0056b3;
+            color: white;
+            font-weight: bold;
+            min-width: 100px;
+        }
+        
+        .data-cell {
+            background-color: #f9f9f9;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            min-height: 80px;
+            vertical-align: middle;
+        }
+        
+        .data-cell:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .empty-cell {
+            background-color: #f8f9fa;
+        }
+        
+        .cell-value {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .cell-value.positive {
+            color: #28a745;
+        }
+        
+        .cell-value.negative {
+            color: #dc3545;
+        }
+    </style>
+    
+    <!-- Reemplazar la sección de script existente con este código -->
+    <script>
+        // Variables globales
+        let currentView = 'kpi'; // 'kpi' o 'history'
+        let activeFilters = {
+            project: 'all',
+            company: 'all'
+        };
+        
+        // Elementos DOM
+        const kpiViewBtn = document.getElementById('kpiView');
+        const historyViewBtn = document.getElementById('historyView');
+        const projectFilter = document.getElementById('projectFilter');
+        const companyFilter = document.getElementById('companyFilter');
+        const applyFiltersBtn = document.getElementById('applyFilters');
+        const resetFiltersBtn = document.getElementById('resetFilters');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        
+        // Funciones de utilidad
+        function showNotification(message, isError = false) {
+            notificationText.textContent = message;
+            notification.className = isError ? 'notification error' : 'notification';
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Funcionalidad de cambio de vista
+        if (kpiViewBtn) {
+            kpiViewBtn.addEventListener('click', function() {
+                currentView = 'kpi';
+                this.classList.add('active');
+                if (historyViewBtn) historyViewBtn.classList.remove('active');
+                updateCellsView();
+                showNotification('Vista cambiada a KPIs');
+            });
+        }
+        
+        if (historyViewBtn) {
+            historyViewBtn.addEventListener('click', function() {
+                currentView = 'history';
+                this.classList.add('active');
+                if (kpiViewBtn) kpiViewBtn.classList.remove('active');
+                updateCellsView();
+                showNotification('Vista cambiada a Históricos');
+            });
+        }
+        
+        // Funcionalidad de filtros
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', function() {
+                activeFilters.project = projectFilter.value;
+                activeFilters.company = companyFilter.value;
+                filterDashboard();
+                showNotification('Filtros aplicados');
+            });
+        }
+        
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', function() {
+                projectFilter.value = 'all';
+                companyFilter.value = 'all';
+                activeFilters.project = 'all';
+                activeFilters.company = 'all';
+                filterDashboard();
+                showNotification('Filtros restablecidos');
+            });
+        }
+        
+        function updateCellsView() {
+            try {
+                document.querySelectorAll('.data-cell').forEach(cell => {
+                    const cellId = cell.getAttribute('data-cell-id');
+                    if (!cellId || !cellData || !cellData[cellId]) return;
+                    
+                    const data = cellData[cellId];
+                    
+                    // Limpiar contenido existente
+                    while (cell.firstChild) {
+                        cell.removeChild(cell.firstChild);
+                    }
+                    
+                    // Añadir encabezado de celda si existe
+                    if (cell.getAttribute('data-subcategory')) {
+                        const headerDiv = document.createElement('div');
+                        headerDiv.className = 'cell-header';
+                        headerDiv.textContent = cell.getAttribute('data-subcategory');
+                        cell.appendChild(headerDiv);
+                    }
+                    
+                    if (currentView === 'kpi') {
+                        // Mostrar valor principal
+                        if ('lastValue' in data) {
+                            const valueDiv = document.createElement('div');
+                            valueDiv.className = 'cell-value';
+                            valueDiv.textContent = formatNumber(data.lastValue);
+                            cell.appendChild(valueDiv);
+                        }
+                        
+                        // Mostrar KPIs como tabla - todos los valores a la vez
+                        if (data.kpis) {
+                            const kpisTable = document.createElement('table');
+                            kpisTable.className = 'kpi-table';
+                            
+                            // Crear filas para cada valor KPI
+                            const kpiData = [
+                                { label: 'kPREV:', value: data.kpis.kPREV, format: 'number' },
+                                { label: 'kREALPREV:', value: data.kpis.kREALPREV, format: 'number' },
+                                { label: 'kPPTOPREV:', value: data.kpis.kPPTOPREV, format: 'number' },
+                                { label: 'kPDTE:', value: data.kpis.kPDTE, format: 'number' }
+                            ];
+                            
+                            kpiData.forEach(item => {
+                                const row = document.createElement('tr');
+                                
+                                const labelCell = document.createElement('th');
+                                labelCell.textContent = item.label;
+                                row.appendChild(labelCell);
+                                
+                                const valueCell = document.createElement('td');
+                                valueCell.textContent = item.format === 'percent' ? 
+                                    formatPercent(item.value) : formatNumber(item.value);
+                                row.appendChild(valueCell);
+                                
+                                kpisTable.appendChild(row);
+                            });
+                            
+                            cell.appendChild(kpisTable);
+                        }
+                    } else {
+                        // Modo histórico: solo mostrar mini gráfico con las 3 curvas temporales
+                        if (data.timeSeries && data.timeSeries.length > 0) {
+                            const chartDiv = document.createElement('canvas');
+                            chartDiv.className = 'mini-chart';
+                            const safeId = 'mini-chart-' + cellId.replace(/[^a-zA-Z0-9]/g, '-');
+                            chartDiv.id = safeId;
+                            cell.appendChild(chartDiv);
+                            
+                            // Crear mini gráfico con las 3 curvas
+                            setTimeout(() => {
+                                createMiniChart(safeId, data.timeSeries);
+                            }, 10);
+                        } else {
+                            const noDataDiv = document.createElement('div');
+                            noDataDiv.className = 'no-data';
+                            noDataDiv.textContent = 'Sin datos históricos';
+                            cell.appendChild(noDataDiv);
+                        }
+                    }
+                });
+                
+                console.log(`Vista actualizada a: ${currentView}`);
+            } catch (error) {
+                console.error('Error al actualizar las celdas:', error);
+                showNotification('Error al actualizar la vista', true);
+            }
+        }
+        
+        function createMiniChart(chartId, timeSeries) {
+            try {
+                const ctx = document.getElementById(chartId);
+                if (!ctx) {
+                    console.error(`No se encontró el elemento con ID: ${chartId}`);
+                    return;
+                }
+                
+                // Verificar que timeSeries tiene datos válidos
+                if (!timeSeries || !Array.isArray(timeSeries) || timeSeries.length === 0) {
+                    console.error('Series temporales no válidas:', timeSeries);
+                    return;
+                }
+                
+                // Organizar datos por tipo (hPREV, hREAL, hPPTO)
+                const seriesByType = {
+                    hPREV: [],
+                    hPPTO: [],
+                    hPDTE: []
+                };
+                
+                // Extraer periodos únicos
+                const periods = [...new Set(timeSeries.map(item => item.period || ''))];
+                
+                // Agrupar valores por tipo y periodo
+                timeSeries.forEach(item => {
+                    const source = item.source || '';
+                    const period = item.period || '';
+                    const value = parseFloat(item.value);
+                    
+                    if (source === 'hPREV') seriesByType.hPREV.push({period, value});
+                    else if (source === 'hPPTO') seriesByType.hPPTO.push({period, value});
+                    else if (source === 'hPDTE') seriesByType.hPDTE.push({period, value});
+                });
+                
+                // Crear datasets para cada tipo
+                const datasets = [];
+                
+                if (seriesByType.hPREV.length > 0) {
+                    datasets.push({
+                        label: 'Anterior',
+                        data: seriesByType.hPREV.map(item => item.value),
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 1,
+                        pointRadius: 2
+                    });
+                }
+                
+                if (seriesByType.hPPTO.length > 0) {
+                    datasets.push({
+                        label: 'Actual',
+                        data: seriesByType.hPPTO.map(item => item.value),
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 1,
+                        pointRadius: 2
+                    });
+                }
+                
+                if (seriesByType.hPDTE.length > 0) {
+                    datasets.push({
+                        label: 'Proyección',
+                        data: seriesByType.hPDTE.map(item => item.value),
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 1,
+                        pointRadius: 2
+                    });
+                }
+                
+                // Si no hay datos específicos, usar todos los datos como una sola serie
+                if (datasets.length === 0) {
+                    const values = timeSeries.map(item => {
+                        const val = parseFloat(item.value);
+                        return isNaN(val) ? 0 : val;
+                    });
+                    
+                    datasets.push({
+                        label: 'Valor',
+                        data: values,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 1,
+                        pointRadius: 2
+                    });
+                }
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: periods,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + formatNumber(context.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                ticks: {
+                                    font: {
+                                        size: 8
+                                    }
+                                }
+                            },
+                            y: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error(`Error al crear mini gráfico ${chartId}:`, error);
+            }
+        }
+        
+        // Funcionalidad de filtros
+        if (applyFiltersBtn) {
+            applyFiltersBtn.addEventListener('click', function() {
+                activeFilters.project = projectFilter.value;
+                activeFilters.company = companyFilter.value;
+                filterDashboard();
+                showNotification('Filtros aplicados');
+            });
+        }
+        
+        if (resetFiltersBtn) {
+            resetFiltersBtn.addEventListener('click', function() {
+                projectFilter.value = 'all';
+                companyFilter.value = 'all';
+                activeFilters.project = 'all';
+                activeFilters.company = 'all';
+                filterDashboard();
+                showNotification('Filtros restablecidos');
+            });
+        }
+        
+        // Reemplazar la función filterDashboard
+        function filterDashboard() {
+        console.log("Aplicando filtros:", activeFilters);
+        
+        // Obtener todas las filas de categoría
+        const categoryRows = document.querySelectorAll('.category-row');
+        
+        // Para cada fila de categoría
+        categoryRows.forEach(row => {
+        // Obtener todas las celdas de datos en esta fila
+        const dataCells = row.querySelectorAll('.data-cell');
+        let rowVisible = false;
+        
+        // Para cada celda de datos
+        dataCells.forEach(cell => {
+        const cellProject = cell.getAttribute('data-project');
+        const cellCompany = cell.getAttribute('data-company');
+        
+        console.log(`Celda: proyecto=${cellProject}, compañía=${cellCompany}`);
+        
+        let showCell = true;
+        
+        // Aplicar filtro de proyecto
+        if (activeFilters.project !== 'all' && cellProject !== activeFilters.project) {
+        showCell = false;
+        }
+        
+        // Aplicar filtro de compañía
+        if (activeFilters.company !== 'all' && cellCompany !== activeFilters.company) {
+        showCell = false;
+        }
+        
+        // Mostrar u ocultar la celda
+        cell.style.display = showCell ? '' : 'none';
+        
+        // Si al menos una celda es visible, la fila debe ser visible
+        if (showCell) {
+        rowVisible = true;
+        }
+        });
+        
+        // Mostrar u ocultar la fila según si tiene celdas visibles
+        row.style.display = rowVisible ? '' : 'none';
+        });
+        }
+        
+        function formatNumber(value) {
+            if (value === null || value === undefined) return 'N/A';
+            return new Intl.NumberFormat('es-ES', { 
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value);
+        }
+        
+        function formatPercent(value) {
+            if (value === null || value === undefined) return 'N/A';
+            return new Intl.NumberFormat('es-ES', { 
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+                style: 'percent',
+                multiplier: 1
+            }).format(value / 100);
+        }
+        
+        // Funcionalidad para mostrar gráficos al hacer doble clic en una celda
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.data-cell').forEach(cell => {
+                cell.addEventListener('dblclick', function() {
+                    const cellId = this.getAttribute('data-cell-id');
+                    if (!cellId || !cellData[cellId]) return;
+                    
+                    const data = cellData[cellId];
+                    
+                    if (data && data.timeSeries && data.timeSeries.length > 0) {
+                        showChart(cellId, data);
+                    } else {
+                        showNotification('No hay datos históricos disponibles para esta celda', true);
+                    }
+                });
+            });
+            
+            // Inicializar la vista
+            updateCellsView();
+        });
+        
+        function showChart(cellId, data) {
+            try {
+                // Configurar el título del modal
+                const cellElement = document.querySelector(`[data-cell-id="${cellId}"]`);
+                const category = cellElement.getAttribute('data-category') || '';
+                const subcategory = cellElement.getAttribute('data-subcategory') || '';
+                document.getElementById('chartTitle').textContent = `Datos Históricos: ${category} - ${subcategory}`;
+                
+                // Preparar datos para el gráfico
+                const timeSeries = data.timeSeries || [];
+                
+                // Organizar datos por tipo (hPREV, hREAL, hPPTO)
+                const seriesByType = {
+                    hPREV: [],
+                    hPPTO: [],
+                    hPDTE: []
+                };
+                
+                // Extraer periodos únicos
+                const periods = [...new Set(timeSeries.map(item => item.period || ''))];
+                
+                // Agrupar valores por tipo y periodo
+                timeSeries.forEach(item => {
+                    const source = item.source || '';
+                    const period = item.period || '';
+                    const value = parseFloat(item.value);
+                    
+                    if (source === 'hPREV') seriesByType.hPREV.push({period, value});
+                    else if (source === 'hPPTO') seriesByType.hPPTO.push({period, value});
+                    else if (source === 'hPDTE') seriesByType.hPDTE.push({period, value});
+                });
+                
+                // Crear datasets para cada tipo
+                const datasets = [];
+                
+                if (seriesByType.hPREV.length > 0) {
+                    datasets.push({
+                        label: 'Anterior',
+                        data: seriesByType.hPREV.map(item => item.value),
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        pointRadius: 5
+                    });
+                }
+                
+                if (seriesByType.hPPTO.length > 0) {
+                    datasets.push({
+                        label: 'Actual',
+                        data: seriesByType.hPPTO.map(item => item.value),
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        pointRadius: 5
+                    });
+                }
+                
+                if (seriesByType.hPDTE.length > 0) {
+                    datasets.push({
+                        label: 'Proyección',
+                        data: seriesByType.hPDTE.map(item => item.value),
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        pointRadius: 5
+                    });
+                }
+                
+                // Si no hay datos específicos, usar todos los datos como una sola serie
+                if (datasets.length === 0) {
+                    const values = timeSeries.map(item => {
+                        const val = parseFloat(item.value);
+                        return isNaN(val) ? 0 : val;
+                    });
+                    
+                    datasets.push({
+                        label: 'Valor',
+                        data: values,
+                        borderColor: '#007bff',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        pointRadius: 5
+                    });
+                }
+                
+                // Crear el gráfico
+                const ctx = document.getElementById('historyChart').getContext('2d');
+                
+                // Destruir el gráfico anterior si existe
+                if (window.historyChart) {
+                    window.historyChart.destroy();
+                }
+                
+                window.historyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: periods,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + formatNumber(context.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: function(value) {
+                                        return formatNumber(value);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Mostrar el modal
+                document.getElementById('chartModal').style.display = "block";
+            } catch (error) {
+                console.error('Error al mostrar gráfico:', error);
+                showNotification('Error al mostrar el gráfico', true);
+            }
+        }
+        
+        // Modal para gráficos
+        const modal = document.getElementById('chartModal');
+        const closeModal = document.querySelector('.close-modal');
+        
+        if (closeModal) {
+            closeModal.onclick = function() {
+                modal.style.display = "none";
+            };
+        }
+        
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        };
+        
+        // Funciones de formato
+        function formatNumber(value) {
+            try {
+                value = parseFloat(value);
+                return value.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            } catch (e) {
+                return "0,00";
+            }
+        }
+        
+        function formatPercent(value) {
+            try {
+                value = parseFloat(value);
+                return (value * 100).toLocaleString('es-ES', {minimumFractionDigits: 1, maximumFractionDigits: 1}) + '%';
+            } catch (e) {
+                return "0,0%";
+            }
+        }
+    </script>
+</body>
+</html>

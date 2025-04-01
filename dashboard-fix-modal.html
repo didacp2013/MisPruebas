@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuadro de Mando - Gráficos Modales Corregidos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2 {
+            color: #1e3a8a;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            background-color: #2563eb;
+        }
+        
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+        }
+        
+        th {
+            background-color: #f1f5f9;
+            text-align: center;
+        }
+        
+        .mini-chart {
+            height: 40px;
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        .cell-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .cell-value {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .positive {
+            color: #1d4ed8;
+        }
+        
+        .negative {
+            color: #dc2626;
+        }
+        
+        .cell-periods {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 3px;
+        }
+        
+        #loadingIndicator {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        #matrixContainer {
+            display: none;
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+        
+        /* Modal de detalle */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        .detail-chart {
+            height: 300px;
+            margin: 20px 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+        }
+        
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+        }
+        
+        .debug-toggle {
+            margin-top: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 10px;
+        }
+        
+        .tab {
+            padding: 8px 12px;
+            cursor: pointer;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .status-indicator {
+            display: none;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: #f0f9ff;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+        }
+        
+        .control-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        
+        .options-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .chart-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #94a3b8;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cuadro de Mando - Gráficos Modales Corregidos</h1>
+        
+        <div>
+            <h2>Cargar Datos</h2>
+            <textarea id="dataInput" placeholder="Pega aquí los datos desde Excel"></textarea>
+            <div>
+                <button id="btnLoadSample">Cargar Datos de Ejemplo</button>
+                <button id="btnProcessData">Procesar Datos</button>
+                <button id="btnAdvanced">Opciones Avanzadas</button>
+                <button id="btnShowDebug">Ver Debug</button>
+            </div>
+            
+            <div id="advancedOptions" style="display: none; margin-top: 10px; background-color: #f8fafc; padding: 10px; border-radius: 4px;">
+                <h3>Opciones Avanzadas</h3>
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    <div>
+                        <label>Columna para Categorías:</label>
+                        <select id="categoryColumn">
+                            <option value="Row">Row</option>
+                            <option value="Categoría">Categoría</option>
+                            <option value="Categoria">Categoria</option>
+                            <option value="Category">Category</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Columna para Subcategorías:</label>
+                        <select id="subcategoryColumn">
+                            <option value="Column">Column</option>
+                            <option value="Subcategoría">Subcategoría</option>
+                            <option value="Subcategoria">Subcategoria</option>
+                            <option value="Subcategory">Subcategory</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Columna para Períodos:</label>
+                        <select id="periodColumn">
+                            <option value="Wks">Wks</option>
+                            <option value="Período">Período</option>
+                            <option value="Periodo">Periodo</option>
+                            <option value="Period">Period</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Columna para Valores:</label>
+                        <select id="valueColumn">
+                            <option value="Value">Value</option>
+                            <option value="Valor">Valor</option>
+                            <option value="Amount">Amount</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>
+                        <input type="checkbox" id="autoDetectColumns" checked>
+                        Detectar columnas automáticamente
+                    </label>
+                </div>
+            </div>
+            
+            <div id="statusIndicator" class="status-indicator"></div>
+        </div>
+        
+        <div id="loadingIndicator">
+            <p>Procesando datos...</p>
+        </div>
+        
+        <div id="matrixContainer">
+            <h2>Matriz de Visualización</h2>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label class="control-label">Mostrar:</label>
+                    <select id="viewMode">
+                        <option value="top">Top categorías y subcategorías</option>
+                        <option value="all">Todas las categorías y subcategorías</option>
+                    </select>
+                </div>
+                
+                <div class="control-group" id="rowsControl">
+                    <label class="control-label">Filas (max):</label>
+                    <select id="maxRows">
+                        <option value="5">5 filas</option>
+                        <option value="10" selected>10 filas</option>
+                        <option value="15">15 filas</option>
+                        <option value="20">20 filas</option>
+                    </select>
+                </div>
+                
+                <div class="control-group" id="colsControl">
+                    <label class="control-label">Columnas (max):</label>
+                    <select id="maxCols">
+                        <option value="4">4 columnas</option>
+                        <option value="6">6 columnas</option>
+                        <option value="8" selected>8 columnas</option>
+                        <option value="10">10 columnas</option>
+                    </select>
+                </div>
+            </div>
+            
+            <table id="matrixTable">
+                <thead>
+                    <tr id="headerRow">
+                        <th>Categoría / Subcategoría</th>
+                        <!-- Columnas dinámicas -->
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Contenido dinámico -->
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 15px; display: flex; justify-content: space-between;">
+                <div style="display: flex; gap: 20px;">
+                    <div style="display: flex; align-items: center;">
+                        <div style="width: 12px; height: 12px; background-color: #3b82f6; margin-right: 5px; border-radius: 2px;"></div>
+                        <span style="font-size: 12px;">Valores positivos: Costes/Gastos</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <div style="width: 12px; height: 12px; background-color: #ef4444; margin-right: 5px; border-radius: 2px;"></div>
+                        <span style="font-size: 12px;">Valores negativos: Ingresos/Ajustes</span>
+                    </div>
+                </div>
+                
+                <p style="font-size: 12px; color: #64748b; margin: 0;">
+                    Haz clic en cualquier celda para ver el detalle
+                </p>
+            </div>
+        </div>
+        
+        <div id="debugInfo" class="debug-info" style="display: none;">
+            <div class="tabs">
+                <div class="tab active" data-tab="general">Información General</div>
+                <div class="tab" data-tab="rawData">Datos Crudos</div>
+                <div class="tab" data-tab="chart">Debug Gráficos</div>
+            </div>
+            
+            <div id="tabGeneral" class="tab-content active">
+                <h3>Información General</h3>
+                <div id="generalDebug"></div>
+            </div>
+            
+            <div id="tabRawData" class="tab-content">
+                <h3>Datos Crudos</h3>
+                <div id="rawDataDebug"></div>
+            </div>
+            
+            <div id="tabChart" class="tab-content">
+                <h3>Debug Gráficos</h3>
+                <div id="chartDebug"></div>
+                <div style="margin-top: 15px;">
+                    <button id="btnTestChart">Probar Gráfico Modal</button>
+                </div>
+            </div>
+            
+            <button id="btnHideDebug" style="margin-top: 10px;">Ocultar Debug</button>
+        </div>
+    </div>
+    
+    <!-- Modal de detalle -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="closeModal">&times;</span>
+            <h2 id="modalTitle">Detalle</h2>
+            <div class="detail-chart" id="detailChart">
+                <div class="chart-placeholder">Cargando gráfico...</div>
+            </div>
+            <div id="chartStatus" style="text-align: center; color: #64748b; margin: 10px 0; font-size: 12px;"></div>
+            <div id="detailTable"></div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script>
+        // Referencias a elementos DOM
+        const dataInput = document.getElementById('dataInput');
+        const btnLoadSample = document.getElementById('btnLoadSample');
+        const btnProcessData = document.getElementById('btnProcessData');
+        const btnAdvanced = document.getElementById('btnAdvanced');
+        const btnShowDebug = document.getElementById('btnShowDebug');
+        const btnHideDebug = document.getElementById('btnHideDebug');
+        const advancedOptions = document.getElementById('advancedOptions');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const matrixContainer = document.getElementById('matrixContainer');
+        const headerRow = document.getElementById('headerRow');
+        const tableBody = document.getElementById('tableBody');
+        const debugInfo = document.getElementById('debugInfo');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const viewMode = document.getElementById('viewMode');
+        const maxRows = document.getElementById('maxRows');
+        const maxCols = document.getElementById('maxCols');
+        
+        // Debug sections
+        const generalDebug = document.getElementById('generalDebug');
+        const rawDataDebug = document.getElementById('rawDataDebug');
+        const chartDebug = document.getElementById('chartDebug');
+        const btnTestChart = document.getElementById('btnTestChart');
+        
+        // Opciones avanzadas
+        const categoryColumn = document.getElementById('categoryColumn');
+        const subcategoryColumn = document.getElementById('subcategoryColumn');
+        const periodColumn = document.getElementById('periodColumn');
+        const valueColumn = document.getElementById('valueColumn');
+        const autoDetectColumns = document.getElementById('autoDetectColumns');
+        
+        // Modal de detalle
+        const detailModal = document.getElementById('detailModal');
+        const closeModal = document.getElementById('closeModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const detailChart = document.getElementById('detailChart');
+        const detailTable = document.getElementById('detailTable');
+        const chartStatus = document.getElementById('chartStatus');
+        
+        // Tabs
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Remover clase active de todos los tabs y contenidos
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Activar el tab actual
+                this.classList.add('active');
+                document.getElementById('tab' + this.dataset.tab.charAt(0).toUpperCase() + this.dataset.tab.slice(1)).classList.add('active');
+            });
+        });
+        
+        // Datos de ejemplo
+        const sampleData = `Row	Column	Wks	Value
+Costo Personal	Nómina	2024.01	24500
+Costo Personal	Nómina	2024.02	24800
+Costo Personal	Nómina	2024.03	25100
+Costo Personal	Nómina	2024.04	25300
+Costo Personal	Seguros Sociales	2024.01	7350
+Costo Personal	Seguros Sociales	2024.02	7440
+Costo Personal	Seguros Sociales	2024.03	7530
+Costo Personal	Seguros Sociales	2024.04	7590
+Gastos Generales	Alquiler	2024.01	3500
+Gastos Generales	Alquiler	2024.02	3500
+Gastos Generales	Alquiler	2024.03	3500
+Gastos Generales	Alquiler	2024.04	3500
+Gastos Generales	Suministros	2024.01	1200
+Gastos Generales	Suministros	2024.02	1350
+Gastos Generales	Suministros	2024.03	1280
+Gastos Generales	Suministros	2024.04	1420
+Ventas	Cliente A	2024.01	-32000
+Ventas	Cliente A	2024.02	-29500
+Ventas	Cliente A	2024.03	-34200
+Ventas	Cliente A	2024.04	-31800
+Ventas	Cliente B	2024.01	-18500
+Ventas	Cliente B	2024.02	-19800
+Ventas	Cliente B	2024.03	-20300
+Ventas	Cliente B	2024.04	-22400
+Marketing	Publicidad	2024.01	4200
+Marketing	Publicidad	2024.02	3900
+Marketing	Publicidad	2024.03	4500
+Marketing	Publicidad	2024.04	4800
+Marketing	Eventos	2024.01	2300
+Marketing	Eventos	2024.02	0
+Marketing	Eventos	2024.03	5600
+Marketing	Eventos	2024.04	1200`;
+        
+        // Variables para almacenar datos procesados
+        let headers = [];
+        let rawData = [];
+        let categories = [];
+        let subcategories = [];
+        let allPeriods = [];
+        let cellData = {};
+        
+        // Estado para debug
+        let lastChartData = null;
+        let chartDrawCalls = 0;
+        
+        // Mostrar mensaje de estado
+        function showStatus(message, type = 'info') {
+            statusIndicator.textContent = message;
+            statusIndicator.style.display = 'block';
+            
+            // Estilo según tipo
+            if (type === 'error') {
+                statusIndicator.style.backgroundColor = '#fee2e2';
+                statusIndicator.style.borderLeftColor = '#ef4444';
+            } else if (type === 'success') {
+                statusIndicator.style.backgroundColor = '#dcfce7';
+                statusIndicator.style.borderLeftColor = '#22c55e';
+            } else {
+                statusIndicator.style.backgroundColor = '#f0f9ff';
+                statusIndicator.style.borderLeftColor = '#3b82f6';
+            }
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(() => {
+                statusIndicator.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Mostrar/ocultar opciones avanzadas
+        btnAdvanced.addEventListener('click', function() {
+            advancedOptions.style.display = advancedOptions.style.display === 'none' ? 'block' : 'none';
+        });
+        
+        // Auto-detección de columnas
+        autoDetectColumns.addEventListener('change', function() {
+            categoryColumn.disabled = this.checked;
+            subcategoryColumn.disabled = this.checked;
+            periodColumn.disabled = this.checked;
+            valueColumn.disabled = this.checked;
+        });
+        
+        // Cargar datos de ejemplo
+        btnLoadSample.addEventListener('click', function() {
+            dataInput.value = sampleData;
+            showStatus('Datos de ejemplo cargados');
+        });
+        
+        // Mostrar/ocultar debug
+        btnShowDebug.addEventListener('click', function() {
+            debugInfo.style.display = 'block';
+            updateDebugInfo();
+        });
+        
+        btnHideDebug.addEventListener('click', function() {
+            debugInfo.style.display = 'none';
+        });
+        
+        // Probar gráfico modal
+        btnTestChart.addEventListener('click', function() {
+            testDetailChart();
+        });
+        
+        // Configurar eventos para controles de visualización
+        viewMode.addEventListener('change', updateMatrix);
+        maxRows.addEventListener('change', updateMatrix);
+        maxCols.addEventListener('change', updateMatrix);
+        
+        // Procesar datos
+        btnProcessData.addEventListener('click', function() {
+            const text = dataInput.value.trim();
+            if (!text) {
+                showStatus('Por favor, ingrese datos para procesar.', 'error');
+                return;
+            }
+            
+            // Mostrar indicador de carga
+            loadingIndicator.style.display = 'block';
+            matrixContainer.style.display = 'none';
+            
+            // Limpiar datos anteriores
+            headers = [];
+            rawData = [];
+            categories = [];
+            subcategories = [];
+            allPeriods = [];
+            cellData = {};
+            
+            // Procesar los datos
+            setTimeout(() => {
+                processData(text);
+            }, 100);
+        });
+        
+        // Cerrar modal
+        closeModal.addEventListener('click', function() {
+            detailModal.style.display = 'none';
+        });
+        
+        window.addEventListener('click', function(event) {
+            if (event.target == detailModal) {
+                detailModal.style.display = 'none';
+            }
+        });
+        
+        // Función para detectar delimitador
+        function detectDelimiter(text) {
+            const lines = text.split(/\r?\n/);
+            if (lines.length < 2) return '\t'; // Default to tab
+            
+            const firstLine = lines[0];
+            
+            // Count potential delimiters
+            const tabCount = (firstLine.match(/\t/g) || []).length;
+            const commaCount = (firstLine.match(/,/g) || []).length;
+            const semicolonCount = (firstLine.match(/;/g) || []).length;
+            
+            // Find the most common delimiter
+            if (tabCount > commaCount && tabCount > semicolonCount) {
+                return '\t';
+            } else if (commaCount > tabCount && commaCount > semicolonCount) {
+                return ',';
+            } else if (semicolonCount > tabCount && semicolonCount > commaCount) {
+                return ';';
+            }
+            
+            // Default to tab if no clear winner
+            return '\t';
+        }
+        
+        // Detectar columnas relevantes
+        function detectColumns(headers) {
+            const result = {
+                category: null,
+                subcategory: null,
+                period: null,
+                value: null
+            };
+            
+            // Try to find category column
+            const categoryOptions = ['row', 'categoría', 'categoria', 'category'];
+            for (const col of headers) {
+                if (categoryOptions.includes(col.toLowerCase())) {
+                    result.category = col;
+                    break;
+                }
+            }
+            
+            // Try to find subcategory column
+            const subcategoryOptions = ['column', 'subcategoría', 'subcategoria', 'subcategory'];
+            for (const col of headers) {
+                if (subcategoryOptions.includes(col.toLowerCase())) {
+                    result.subcategory = col;
+                    break;
+                }
+            }
+            
+            // Try to find period column
+            const periodOptions = ['wks', 'período', 'periodo', 'period', 'date', 'fecha'];
+            for (const col of headers) {
+                if (periodOptions.includes(col.toLowerCase())) {
+                    result.period = col;
+                    break;
+                }
+            }
+            
+            // Try to find value column
+            const valueOptions = ['value', 'valor', 'amount', 'importe'];
+            for (const col of headers) {
+                if (valueOptions.includes(col.toLowerCase())) {
+                    result.value = col;
+                    break;
+                }
+            }
+            
+            return result;
+        }
+        
+        // Función principal para procesar datos
+        function processData(text) {
+            try {
+                // Detect delimiter
+                const delimiter = detectDelimiter(text);
+                
+                // Dividir por líneas
+                const lines = text.split(/\r?\n/);
+                if (lines.length < 2) {
+                    throw new Error('No hay suficientes líneas de datos.');
+                }
+                
+                // Obtener encabezados
+                headers = lines[0].split(delimiter).map(h => h.trim());
+                
+                // Auto-detect columns or use manual selection
+                let catColumn, subCatColumn, periodColumn, valColumn;
+                
+                if (autoDetectColumns.checked) {
+                    const detectedColumns = detectColumns(headers);
+                    
+                    catColumn = detectedColumns.category;
+                    subCatColumn = detectedColumns.subcategory;
+                    periodColumn = detectedColumns.period;
+                    valColumn = detectedColumns.value;
+                    
+                    // Update the select elements to show detected columns
+                    if (catColumn) categoryColumn.value = catColumn;
+                    if (subCatColumn) subcategoryColumn.value = subCatColumn;
+                    if (periodColumn) periodColumn.value = periodColumn;
+                    if (valColumn) valueColumn.value = valColumn;
+                } else {
+                    catColumn = categoryColumn.value;
+                    subCatColumn = subcategoryColumn.value;
+                    periodColumn = periodColumn.value;
+                    valColumn = valueColumn.value;
+                }
+                
+                // Verify all required columns are found
+                if (!headers.includes(catColumn)) {
+                    throw new Error(`No se encontró la columna de categoría: ${catColumn}`);
+                }
+                if (!headers.includes(subCatColumn)) {
+                    throw new Error(`No se encontró la columna de subcategoría: ${subCatColumn}`);
+                }
+                if (!headers.includes(periodColumn)) {
+                    throw new Error(`No se encontró la columna de período: ${periodColumn}`);
+                }
+                if (!headers.includes(valColumn)) {
+                    throw new Error(`No se encontró la columna de valor: ${valColumn}`);
+                }
+                
+                // Obtener índices de columnas
+                const catIndex = headers.indexOf(catColumn);
+                const subCatIndex = headers.indexOf(subCatColumn);
+                const periodIndex = headers.indexOf(periodColumn);
+                const valueIndex = headers.indexOf(valColumn);
+                
+                // Procesar datos
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue;
+                    
+                    const values = lines[i].split(delimiter);
+                    if (values.length !== headers.length) continue;
+                    
+                    const row = {
+                        category: values[catIndex].trim(),
+                        subcategory: values[subCatIndex].trim(),
+                        period: values[periodIndex].trim(),
+                        value: parseFloat(String(values[valueIndex]).replace(',', '.'))
+                    };
+                    
+                    if (isNaN(row.value)) continue;
+                    
+                    rawData.push(row);
+                }
+                
+                // Obtener categorías, subcategorías y períodos únicos
+                const catSet = new Set();
+                const subCatSet = new Set();
+                const periodSet = new Set();
+                
+                rawData.forEach(item => {
+                    catSet.add(item.category);
+                    subCatSet.add(item.subcategory);
+                    periodSet.add(item.period);
+                });
+                
+                categories = Array.from(catSet);
+                subcategories = Array.from(subCatSet);
+                allPeriods = Array.from(periodSet);
+                
+                // Check if we actually have data
+                if (rawData.length === 0) {
+                    throw new Error('No se encontraron datos válidos después de procesar.');
+                }
+                
+                // Ordenar períodos
+                sortPeriods();
+                
+                // Preparar datos para cada celda
+                prepareCellData();
+                
+                // Generar matriz
+                generateMatrix();
+                
+                // Actualizar información de debug
+                updateDebugInfo();
+                
+                // Ocultar indicador de carga y mostrar matriz
+                loadingIndicator.style.display = 'none';
+                matrixContainer.style.display = 'block';
+                
+                // Mostrar mensaje de éxito
+                showStatus(`Datos procesados correctamente: ${rawData.length} registros, ${categories.length} categorías, ${subcategories.length} subcategorías, ${allPeriods.length} períodos`, 'success');
+            } catch (error) {
+                console.error('Error al procesar datos:', error);

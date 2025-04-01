@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prueba JSON</title>
+</head>
+<body>
+    <h1>Prueba de JSON</h1>
+    <div id="result"></div>
+
+    <script>
+        // Método 1: JSON directo
+        try {
+            const data1 = {"test": "valor", "array": [1, 2, 3]};
+            document.getElementById("result").innerHTML += "<p>Método 1 (objeto directo): OK</p>";
+        } catch (e) {
+            document.getElementById("result").innerHTML += "<p>Método 1 error: " + e.message + "</p>";
+        }
+
+        // Método 2: JSON.parse con comillas dobles
+        try {
+            const data2 = JSON.parse('{"test": "valor", "array": [1, 2, 3]}');
+            document.getElementById("result").innerHTML += "<p>Método 2 (JSON.parse con comillas dobles): OK</p>";
+        } catch (e) {
+            document.getElementById("result").innerHTML += "<p>Método 2 error: " + e.message + "</p>";
+        }
+
+        // Método 3: JSON.parse con comillas simples escapadas
+        try {
+            const data3 = JSON.parse('{"test": "valor con \'comillas\' simples", "array": [1, 2, 3]}');
+            document.getElementById("result").innerHTML += "<p>Método 3 (JSON.parse con comillas simples escapadas): OK</p>";
+        } catch (e) {
+            document.getElementById("result").innerHTML += "<p>Método 3 error: " + e.message + "</p>";
+        }
+    </script>
+</body>
+</html>
